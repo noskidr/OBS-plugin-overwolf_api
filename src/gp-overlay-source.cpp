@@ -136,8 +136,7 @@ void paint_overlay(OverlaySource *s, uint64_t now_ns)
 			p.setPen(QColor(245, 247, 250));
 			p.setFont(label_font);
 			QRectF label_rect(card.left() + 14, card.top() + 4, card.width() - 20, card.height() / 2);
-			p.drawText(label_rect, Qt::AlignLeft | Qt::AlignVCenter,
-				   QString::fromUtf8(it->label.c_str()));
+			p.drawText(label_rect, Qt::AlignLeft | Qt::AlignVCenter, QString::fromUtf8(it->label.c_str()));
 
 			if (!it->detail.empty()) {
 				p.setPen(QColor(168, 178, 191));
@@ -145,8 +144,7 @@ void paint_overlay(OverlaySource *s, uint64_t now_ns)
 				QRectF detail_rect(card.left() + 14, card.top() + card.height() / 2 - 2,
 						   card.width() - 20, card.height() / 2 - 4);
 				QString detail = QString::fromUtf8(it->detail.c_str());
-				detail = p.fontMetrics().elidedText(detail, Qt::ElideRight,
-								    (int)detail_rect.width());
+				detail = p.fontMetrics().elidedText(detail, Qt::ElideRight, (int)detail_rect.width());
 				p.drawText(detail_rect, Qt::AlignLeft | Qt::AlignVCenter, detail);
 			}
 
@@ -251,18 +249,17 @@ void overlay_render(void *data, gs_effect_t *)
 
 	if (s->need_upload && !s->image.isNull()) {
 		s->need_upload = false;
-		if (!s->texture || s->tex_w != (uint32_t)s->image.width() ||
-		    s->tex_h != (uint32_t)s->image.height()) {
+		if (!s->texture || s->tex_w != (uint32_t)s->image.width() || s->tex_h != (uint32_t)s->image.height()) {
 			if (s->texture)
 				gs_texture_destroy(s->texture);
 			const uint8_t *bits = s->image.constBits();
-			s->texture = gs_texture_create((uint32_t)s->image.width(), (uint32_t)s->image.height(),
-						       GS_BGRA, 1, &bits, GS_DYNAMIC);
+			s->texture = gs_texture_create((uint32_t)s->image.width(), (uint32_t)s->image.height(), GS_BGRA,
+						       1, &bits, GS_DYNAMIC);
 			s->tex_w = (uint32_t)s->image.width();
 			s->tex_h = (uint32_t)s->image.height();
 		} else {
-			gs_texture_set_image(s->texture, s->image.constBits(),
-					     (uint32_t)s->image.bytesPerLine(), false);
+			gs_texture_set_image(s->texture, s->image.constBits(), (uint32_t)s->image.bytesPerLine(),
+					     false);
 		}
 	}
 
@@ -295,8 +292,7 @@ obs_properties_t *overlay_properties(void *)
 	obs_properties_add_int(props, "height", obs_module_text("OverlaySource.Height"), 80, 2160, 2);
 	obs_properties_add_bool(props, "show_feed", obs_module_text("OverlaySource.ShowFeed"));
 	obs_properties_add_bool(props, "show_stats", obs_module_text("OverlaySource.ShowStats"));
-	obs_properties_add_float_slider(props, "font_scale", obs_module_text("OverlaySource.FontScale"), 0.5, 3.0,
-					0.1);
+	obs_properties_add_float_slider(props, "font_scale", obs_module_text("OverlaySource.FontScale"), 0.5, 3.0, 0.1);
 	return props;
 }
 

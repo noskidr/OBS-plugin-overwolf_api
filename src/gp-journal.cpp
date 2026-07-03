@@ -284,7 +284,7 @@ std::string Journal::render_edl() const
 		int64_t base = e.record_ms >= 0 ? e.record_ms : e.stream_ms;
 		if (base < 0 || e.importance < IMP_MINOR)
 			continue;
-		const char *color = e.importance >= IMP_EPIC     ? "ResolveColorRed"
+		const char *color = e.importance >= IMP_EPIC      ? "ResolveColorRed"
 				    : e.importance == IMP_NOTABLE ? "ResolveColorGreen"
 								  : "ResolveColorBlue";
 		std::string tc_in = edl_timecode(base + hour_ms);
@@ -311,8 +311,7 @@ std::string Journal::export_files(unsigned which)
 		write_json();
 	if (which & 2) {
 		std::string s = render_youtube();
-		os_quick_write_utf8_file((session_dir_ + "/youtube-chapters.txt").c_str(), s.c_str(), s.size(),
-					 false);
+		os_quick_write_utf8_file((session_dir_ + "/youtube-chapters.txt").c_str(), s.c_str(), s.size(), false);
 	}
 	if (which & 4) {
 		std::string s = render_csv();

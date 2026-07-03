@@ -85,8 +85,7 @@ private:
 		for (int i = 0; i < 16; i++) {
 			w[i] = (static_cast<uint32_t>(block[i * 4]) << 24) |
 			       (static_cast<uint32_t>(block[i * 4 + 1]) << 16) |
-			       (static_cast<uint32_t>(block[i * 4 + 2]) << 8) |
-			       static_cast<uint32_t>(block[i * 4 + 3]);
+			       (static_cast<uint32_t>(block[i * 4 + 2]) << 8) | static_cast<uint32_t>(block[i * 4 + 3]);
 		}
 		for (int i = 16; i < 80; i++)
 			w[i] = rol(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);

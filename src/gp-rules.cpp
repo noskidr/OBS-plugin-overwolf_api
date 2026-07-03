@@ -280,8 +280,8 @@ std::vector<GpEvent> RulesEngine::derive(const GpEvent &ev)
 			EventMeta meta = Taxonomy::lookup(d.game_id, d.name);
 			d.label = meta.label;
 			d.importance = meta.importance;
-			d.detail = std::to_string(chain) + " kills in " +
-				   std::to_string(multikill_window_ms_ / 1000) + "s";
+			d.detail = std::to_string(chain) + " kills in " + std::to_string(multikill_window_ms_ / 1000) +
+				   "s";
 			out.push_back(std::move(d));
 		}
 	}

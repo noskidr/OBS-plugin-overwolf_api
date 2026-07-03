@@ -36,9 +36,8 @@ void read_game(obs_data_t *msg, std::string &game_id, std::string &game_name)
 	if (id_item) {
 		enum obs_data_number_type num_type = obs_data_item_numtype(id_item);
 		if (obs_data_item_gettype(id_item) == OBS_DATA_NUMBER) {
-			long long v = (num_type == OBS_DATA_NUM_DOUBLE)
-					      ? (long long)obs_data_item_get_double(id_item)
-					      : obs_data_item_get_int(id_item);
+			long long v = (num_type == OBS_DATA_NUM_DOUBLE) ? (long long)obs_data_item_get_double(id_item)
+									: obs_data_item_get_int(id_item);
 			game_id = std::to_string(v);
 		} else {
 			const char *s = obs_data_item_get_string(id_item);

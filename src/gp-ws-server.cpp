@@ -292,7 +292,7 @@ struct WsServer::Impl {
 				handler(c->id, "127.0.0.1");
 		}
 
-		std::string message;   /* accumulates across fragments */
+		std::string message; /* accumulates across fragments */
 		uint8_t frag_opcode = 0;
 
 		for (;;) {

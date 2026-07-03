@@ -621,10 +621,10 @@ void GpCore::ws_connected(int client_id)
 {
 	server_.send_text(client_id, Protocol::make_welcome(PLUGIN_VERSION, obs_get_version_string()));
 	int64_t now = mono_ms();
-	server_.send_text(client_id, Protocol::make_status(obs_frontend_streaming_active(),
-							   obs_frontend_recording_active(),
-							   obs_frontend_replay_buffer_active(),
-							   stream_clock_.elapsed(now), record_clock_.elapsed(now)));
+	server_.send_text(client_id,
+			  Protocol::make_status(obs_frontend_streaming_active(), obs_frontend_recording_active(),
+						obs_frontend_replay_buffer_active(), stream_clock_.elapsed(now),
+						record_clock_.elapsed(now)));
 	obs_queue_task(
 		OBS_TASK_UI,
 		[](void *param) {
@@ -717,8 +717,7 @@ static void hotkey_clip(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
 static void hotkey_export(void *, obs_hotkey_id, obs_hotkey_t *, bool pressed)
 {
 	if (pressed) {
-		obs_queue_task(
-			OBS_TASK_UI, [](void *) { GpCore::instance().export_now(); }, nullptr, false);
+		obs_queue_task(OBS_TASK_UI, [](void *) { GpCore::instance().export_now(); }, nullptr, false);
 	}
 }
 
@@ -727,8 +726,8 @@ void GpCore::register_hotkeys()
 	hk_bookmark_ = obs_hotkey_register_frontend("gamepulse.bookmark", obs_module_text("Hotkey.Bookmark"),
 						    hotkey_bookmark, this);
 	hk_clip_ = obs_hotkey_register_frontend("gamepulse.clip", obs_module_text("Hotkey.Clip"), hotkey_clip, this);
-	hk_export_ = obs_hotkey_register_frontend("gamepulse.export", obs_module_text("Hotkey.Export"), hotkey_export,
-						  this);
+	hk_export_ =
+		obs_hotkey_register_frontend("gamepulse.export", obs_module_text("Hotkey.Export"), hotkey_export, this);
 }
 
 void GpCore::save_hotkeys(obs_data_t *cfg)

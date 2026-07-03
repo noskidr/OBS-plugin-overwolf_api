@@ -304,8 +304,8 @@ bool TwitchService::refresh_tokens_locked(std::string refresh_token)
 	if (cid.empty() || refresh_token.empty())
 		return false;
 
-	std::string form = "grant_type=refresh_token&refresh_token=" + url_encode(refresh_token) +
-			   "&client_id=" + url_encode(cid);
+	std::string form =
+		"grant_type=refresh_token&refresh_token=" + url_encode(refresh_token) + "&client_id=" + url_encode(cid);
 	Http res = http_post_form(std::string(TWITCH_ID_BASE) + "/oauth2/token", form);
 	if (res.code != 200) {
 		obs_log(LOG_WARNING, "twitch token refresh failed (%ld): %s", res.code, res.body.c_str());
@@ -354,8 +354,8 @@ bool TwitchService::ensure_fresh_token()
 			std::lock_guard<std::mutex> lock(state_mutex_);
 			token = access_token_;
 		}
-		Http res = http_get(std::string(TWITCH_ID_BASE) + "/oauth2/validate",
-				    {"Authorization: OAuth " + token});
+		Http res =
+			http_get(std::string(TWITCH_ID_BASE) + "/oauth2/validate", {"Authorization: OAuth " + token});
 		if (res.code == 200) {
 			obs_data_t *d = obs_data_create_from_json(res.body.c_str());
 			int64_t expires_in = d ? obs_data_get_int(d, "expires_in") : 0;
@@ -437,8 +437,7 @@ void TwitchService::begin_device_auth(std::function<void(std::string, std::strin
 		if (res.code != 200) {
 			device_active_ = false;
 			if (on_done)
-				on_done(false, "device request failed (" + std::to_string(res.code) +
-						       "): " + res.body);
+				on_done(false, "device request failed (" + std::to_string(res.code) + "): " + res.body);
 			return;
 		}
 
@@ -512,8 +511,9 @@ void TwitchService::begin_device_auth(std::function<void(std::string, std::strin
 
 			device_active_ = false;
 			if (on_done)
-				on_done(false, message.empty() ? ("token poll failed (" + std::to_string(tok.code) + ")")
-							       : message);
+				on_done(false, message.empty()
+						       ? ("token poll failed (" + std::to_string(tok.code) + ")")
+						       : message);
 			return;
 		}
 
@@ -784,8 +784,8 @@ void TwitchService::irc_worker()
 						start = p + 1 + needle.size();
 					}
 					size_t end = tags.find(';', start);
-					return tags.substr(start, end == std::string::npos ? std::string::npos
-											   : end - start);
+					return tags.substr(start,
+							   end == std::string::npos ? std::string::npos : end - start);
 				};
 
 				std::string badges = tag_value("badges");

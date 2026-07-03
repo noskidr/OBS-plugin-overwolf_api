@@ -42,7 +42,7 @@ public:
 	RulesEngine();
 
 	/* ---- config ---- */
-	void load(obs_data_t *root);      /* reads "rules" object if present */
+	void load(obs_data_t *root); /* reads "rules" object if present */
 	void save(obs_data_t *root) const;
 
 	ActionConfig action_config(uint32_t action_bit) const;

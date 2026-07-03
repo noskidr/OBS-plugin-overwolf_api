@@ -40,7 +40,7 @@ GpDock::GpDock(QWidget *parent) : QWidget(parent)
 		if (ev) {
 			QString time = QString::fromStdString(ev->stream_ms >= 0   ? format_clock(ev->stream_ms)
 							      : ev->record_ms >= 0 ? format_clock(ev->record_ms)
-									       : "--:--");
+										   : "--:--");
 			QString actions;
 			auto add = [&](const char *s) {
 				if (!actions.isEmpty())
@@ -53,8 +53,7 @@ GpDock::GpDock(QWidget *parent) : QWidget(parent)
 				add("clip");
 			if (ev->actions_taken & ACTION_MARKER)
 				add("marker");
-			QMetaObject::invokeMethod(this, "appendEventRow", Qt::QueuedConnection,
-						  Q_ARG(QString, time),
+			QMetaObject::invokeMethod(this, "appendEventRow", Qt::QueuedConnection, Q_ARG(QString, time),
 						  Q_ARG(QString, QString::fromStdString(ev->label)),
 						  Q_ARG(QString, QString::fromStdString(ev->detail)),
 						  Q_ARG(int, ev->importance), Q_ARG(QString, actions));
@@ -215,7 +214,8 @@ void GpDock::refreshStatus()
 	}
 
 	if (s.twitch_authed) {
-		QString t = QString(obs_module_text("Dock.TwitchConnectedAs")).arg(QString::fromStdString(s.twitch_login));
+		QString t =
+			QString(obs_module_text("Dock.TwitchConnectedAs")).arg(QString::fromStdString(s.twitch_login));
 		if (s.chat_listener)
 			t += QString::fromUtf8("  \xF0\x9F\x92\xAC");
 		twitch_label_->setText(t);
@@ -287,7 +287,7 @@ void GpDock::onExport()
 	std::string dir = GpCore::instance().export_now();
 	if (!dir.empty()) {
 		QMessageBox::information(this, obs_module_text("Dock.Export"),
-					QString(obs_module_text("Dock.ExportedTo")).arg(QString::fromStdString(dir)));
+					 QString(obs_module_text("Dock.ExportedTo")).arg(QString::fromStdString(dir)));
 		QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(dir)));
 	}
 }

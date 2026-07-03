@@ -63,7 +63,7 @@ struct OverlayFeed {
 struct CoreStatus {
 	bool server_running = false;
 	int clients = 0;
-	std::string game_name;    /* active game ("" if none) */
+	std::string game_name; /* active game ("" if none) */
 	bool streaming = false;
 	bool recording = false;
 	bool replay = false;

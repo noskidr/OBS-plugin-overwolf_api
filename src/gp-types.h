@@ -39,14 +39,14 @@ enum class EventSource {
 
 /* A normalized game event flowing through the pipeline. */
 struct GpEvent {
-	int64_t wall_ms = 0;      /* epoch milliseconds */
-	int64_t stream_ms = -1;   /* ms since stream start, -1 if not streaming */
-	int64_t record_ms = -1;   /* ms since recording start (pause-adjusted), -1 if not recording */
-	std::string game_id;      /* numeric id as string, e.g. "21640"; empty for manual */
-	std::string game_name;    /* "VALORANT" */
-	std::string name;         /* machine key: "kill", "spike_planted", "multikill_3", "manual_bookmark" */
-	std::string label;        /* display: "Kill", "Triple Kill" */
-	std::string detail;       /* optional human detail: victim, weapon, note text */
+	int64_t wall_ms = 0;    /* epoch milliseconds */
+	int64_t stream_ms = -1; /* ms since stream start, -1 if not streaming */
+	int64_t record_ms = -1; /* ms since recording start (pause-adjusted), -1 if not recording */
+	std::string game_id;    /* numeric id as string, e.g. "21640"; empty for manual */
+	std::string game_name;  /* "VALORANT" */
+	std::string name;       /* machine key: "kill", "spike_planted", "multikill_3", "manual_bookmark" */
+	std::string label;      /* display: "Kill", "Triple Kill" */
+	std::string detail;     /* optional human detail: victim, weapon, note text */
 	int importance = IMP_MINOR;
 	EventSource source = EventSource::Gep;
 	uint32_t actions_taken = ACTION_NONE; /* filled by the action executor */
