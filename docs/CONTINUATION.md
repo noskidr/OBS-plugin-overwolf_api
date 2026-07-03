@@ -50,8 +50,8 @@ auto‑fetched. You need:
 
 2. **Clone + build**:
    ```powershell
-   git clone https://github.com/noskidr/OBS-plugin-overworlf_api.git
-   cd OBS-plugin-overworlf_api
+   git clone https://github.com/noskidr/OBS-plugin-overwolf_api.git
+   cd OBS-plugin-overwolf_api
    $cmake = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
    & $cmake --preset windows-x64          # first run fetches OBS+Qt+curl to .deps\
    & $cmake --build --preset windows-x64
@@ -105,7 +105,7 @@ python -m gersemi -i CMakeLists.txt
 Then commit with the trailers used throughout (`Co-Authored-By:` +
 `Claude-Session:`), and push. Watch the run:
 ```powershell
-Invoke-RestMethod "https://api.github.com/repos/noskidr/OBS-plugin-overworlf_api/actions/runs?per_page=1"
+Invoke-RestMethod "https://api.github.com/repos/noskidr/OBS-plugin-overwolf_api/actions/runs?per_page=1"
 ```
 
 ## 5. Where the knowledge lives

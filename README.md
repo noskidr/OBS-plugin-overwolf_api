@@ -12,7 +12,7 @@ when you're done.
 > game‑agnostic — any game the companion forwards events for works — but the
 > shipped companion normalizer and event taxonomy are tuned for Valorant.
 
-Repository: <https://github.com/noskidr/OBS-plugin-overworlf_api>
+Repository: <https://github.com/noskidr/OBS-plugin-overwolf_api>
 
 ---
 
@@ -68,7 +68,7 @@ included companion, the built‑in match **simulator**, or your own script.
 ### 1. The OBS plugin
 
 Grab `obs-gamepulse-<version>-windows-x64.zip` from
-[Releases](https://github.com/noskidr/OBS-plugin-overworlf_api/releases) (or
+[Releases](https://github.com/noskidr/OBS-plugin-overwolf_api/releases) (or
 build it — see below) and copy into your OBS install (or `%APPDATA%\obs-studio`):
 
 ```
@@ -112,8 +112,8 @@ cmake --build --preset windows-x64
 ```
 
 Output: `build_x64\rundir\RelWithDebInfo\obs-gamepulse.dll`. Install it locally
-with the layout above, or let CI package it — the repo ships the
-obs‑plugintemplate GitHub Actions (build on push/PR for Windows/macOS/Linux).
+with the layout above, or let CI package it — GitHub Actions builds and packages
+the Windows plugin on every push (GamePulse is Windows‑only; see `CLAUDE.md`).
 
 The plugin is built from
 [obs-plugintemplate](https://github.com/obsproject/obs-plugintemplate) with

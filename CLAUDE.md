@@ -12,7 +12,7 @@ highlight exports (YouTube chapters / CSV / DaVinci EDL).
 
 - **v1 scope: Valorant only** (Overwolf game id `21640`). The plugin is
   game‑agnostic; only the companion's normalizer/taxonomy are Valorant‑specific.
-- Repo: <https://github.com/noskidr/OBS-plugin-overworlf_api> (remote `origin`,
+- Repo: <https://github.com/noskidr/OBS-plugin-overwolf_api> (remote `origin`,
   branch `main`).
 - The two halves talk over a localhost WebSocket + JSON protocol
   (see `PROTOCOL.md`). This is the key seam — you can test the plugin with the
