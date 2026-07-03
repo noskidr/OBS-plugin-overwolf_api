@@ -183,7 +183,8 @@ private:
 
 	bool chapter_warned_ = false;
 	bool started_ = false;
-	bool record_started_by_us_ = false;
+	bool record_started_by_us_ = false;   /* we own the current recording */
+	bool record_start_requested_ = false; /* we asked to start; await STARTED */
 
 	mutable std::mutex status_mutex_; /* guards active_game_* for status() */
 };

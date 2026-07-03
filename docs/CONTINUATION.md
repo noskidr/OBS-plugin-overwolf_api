@@ -127,8 +127,13 @@ Invoke-RestMethod "https://api.github.com/repos/noskidr/OBS-plugin-overwolf_api/
 ## 6. Likely next tasks (roadmap)
 
 1. **Live GEP validation** — play one Valorant match under `npm start`, log every
-   `new-game-event`/`new-info-update`, confirm the normalizer's assumptions
-   (kill_feed attacker == `me.player_name`, round_phase values, latency).
+   `new-game-event`/`new-info-update`, and confirm the normalizer's name
+   canonicalization holds against real data. v0.2.1 fixed a critical mismatch
+   (GEP `me.player_name` carries the Riot tagline `Doom#5339`, kill_feed names
+   are bare, scoreboard names are spaced `MrTest #1111`) via `baseName()`; the
+   offline test `companion/test/normalizer.test.js` (`npm test`) locks the
+   reconciliation/clutch/priming logic, but only a live match confirms the raw
+   field formats. Also confirm round_phase values + event latency.
 2. **Twitch live test** — real affiliate account: device‑flow login, burst a few
    markers, confirm `position_seconds` accuracy and the VOD‑disabled 404 path.
 3. **Chapters matrix** — verify `obs_frontend_recording_add_chapter` across MKV /

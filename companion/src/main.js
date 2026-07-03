@@ -90,6 +90,11 @@ function wireSource(source) {
     const infos = normalizer.handleInfo(info, ts);
     for (const p of infos) forwarder.send(p);
   });
+  source.on('prime', (snapshot) => {
+    // mid-match start: adopt state (map/agent/score/round) without replaying
+    // already-past round outcomes
+    for (const p of normalizer.primeFromSnapshot(snapshot, Date.now())) forwarder.send(p);
+  });
 }
 
 function startSimulator() {

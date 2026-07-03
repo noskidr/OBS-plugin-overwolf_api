@@ -347,9 +347,10 @@ void GpCore::on_game_state(bool detected)
 		}
 		switch_scene("scene_game");
 	} else {
-		if (obs_data_get_bool(config_, "auto_record") && record_started_by_us_ &&
-		    obs_frontend_recording_active()) {
-			/* game closed mid-match — don't leave an orphan recording */
+		/* Gate only on our ownership flag (+ active), NOT the current
+		   auto_record setting — else toggling auto_record off mid-match would
+		   orphan the recording we started. */
+		if (record_started_by_us_ && obs_frontend_recording_active()) {
 			record_started_by_us_ = false;
 			obs_frontend_recording_stop();
 		}
@@ -412,14 +413,17 @@ void GpCore::run_match_automation(const GpEvent &ev)
 				obs_log(LOG_WARNING, "recording split rejected (needs Hybrid MP4 or fMP4)");
 		} else if (!recording && obs_data_get_bool(config_, "auto_record")) {
 			obs_log(LOG_INFO, "match started — starting recording");
-			record_started_by_us_ = true;
+			/* record_started_by_us_ is set in the RECORDING_STARTED event
+			   once the start actually succeeds (a failed start fires no
+			   event, so we never claim ownership of a recording that isn't
+			   running). */
+			record_start_requested_ = true;
 			obs_frontend_recording_start();
 		}
 	} else if (ev.name == "match_end") {
 		if (obs_data_get_bool(config_, "export_on_match_end") && journal_.session_open())
 			journal_.export_files();
-		if (obs_data_get_bool(config_, "auto_record") && record_started_by_us_ &&
-		    obs_frontend_recording_active()) {
+		if (record_started_by_us_ && obs_frontend_recording_active()) {
 			record_started_by_us_ = false;
 			obs_log(LOG_INFO, "match ended — stopping recording");
 			obs_frontend_recording_stop();
@@ -569,6 +573,10 @@ void GpCore::on_frontend_event(enum obs_frontend_event event)
 	case OBS_FRONTEND_EVENT_RECORDING_STARTED:
 		record_clock_.start(now);
 		chapter_warned_ = false;
+		/* Only claim ownership if WE requested this start; a user-initiated
+		   recording must never be auto-stopped by us. */
+		record_started_by_us_ = record_start_requested_;
+		record_start_requested_ = false;
 		journal_.begin_session("recording started");
 		broadcast_status();
 		break;
@@ -580,6 +588,10 @@ void GpCore::on_frontend_event(enum obs_frontend_event event)
 		break;
 	case OBS_FRONTEND_EVENT_RECORDING_STOPPED:
 		record_clock_.stop();
+		/* Any stop (ours or the user's) ends our ownership, so a later
+		   match_end / game-close can't stop a recording the user started next. */
+		record_started_by_us_ = false;
+		record_start_requested_ = false;
 		if (!obs_frontend_streaming_active() && journal_.session_open())
 			journal_.end_session(obs_data_get_bool(config_, "auto_export"));
 		broadcast_status();

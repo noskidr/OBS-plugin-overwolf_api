@@ -56,7 +56,9 @@ class Simulator extends EventEmitter {
     };
 
     // ---- pre-match: identity, agent select, map load ----
-    at(200, () => this._info('me', 'player_name', 'You'));
+    // player_name carries the Riot tagline; scoreboard uses "You #1234"; the
+    // kill feed uses bare "You" — the normalizer must reconcile all three.
+    at(200, () => this._info('me', 'player_name', 'You#1234'));
     at(200, () => this._info('me', 'agent', 'Wushu_PC_C')); // Jett
     at(300, () => this._info('game_info', 'scene', 'CharacterSelectPersistentLevel'));
     at(2000, () => this._info('game_info', 'scene', 'Ascent'));
@@ -175,18 +177,19 @@ class Simulator extends EventEmitter {
   }
 
   _scoreboardSync() {
+    // Scoreboard names use the spaced "Name #TAG" form; the local player has
+    // no is_local flag here, so attribution must fall back to name matching.
     const all = [
-      { name: 'You', teammate: true, is_local: true },
-      ...TEAMMATES.map((n) => ({ name: n, teammate: true, is_local: false })),
-      ...ENEMIES.map((n) => ({ name: n, teammate: false, is_local: false })),
+      { name: 'You #1234', teammate: true, aliveKey: 'You' },
+      ...TEAMMATES.map((n) => ({ name: n + ' #22', teammate: true, aliveKey: n })),
+      ...ENEMIES.map((n) => ({ name: n + ' #77', teammate: false, aliveKey: n })),
     ];
     all.forEach((p, i) => {
       this._info('match_info', `scoreboard_${i}`, {
         name: p.name,
         teammate: p.teammate,
-        is_local: p.is_local,
-        alive: this._alive[p.name] !== false,
-        kills: p.is_local ? this._kills : 0,
+        alive: this._alive[p.aliveKey] !== false,
+        kills: p.aliveKey === 'You' ? this._kills : 0,
         deaths: 0,
         assists: 0,
       });

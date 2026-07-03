@@ -2,6 +2,33 @@
 
 All notable changes to GamePulse for OBS. Valorant‑only (Overwolf game 21640).
 
+## 0.2.1
+
+Correctness fixes from an adversarial review of the v0.2 additions (the
+simulator's uniform test names had masked real‑match bugs):
+
+- **Critical — player name matching.** GEP `me.player_name` carries the Riot
+  tagline (`Doom#5339`), kill_feed names are bare (`YTDestruct28`), and
+  scoreboard names are spaced (`MrTest #1111`). v0.2 compared them directly, so
+  in a **real match** no local kills, first blood, multikills or aces would ever
+  fire. All player comparisons now go through `baseName()` (drop `#tag`, collapse
+  spaces, lowercase); scoreboard `is_local` stays the primary signal.
+- **Kill reconciliation** — the GEP counter is now the authoritative kill count
+  and kill_feed supplies detail; exactly `kills` events are emitted regardless of
+  which arrives first (no double‑count, none lost if the feed degrades).
+- **Clutch** — disarmed when the local player dies (no false clutch on a
+  post‑mortem round win); armed from kill‑feed deaths too, not only scoreboard
+  updates; tracks the **peak** enemy count while alone (a 1v3 traded to 1v1 is
+  still a 1v3); stale/disconnected scoreboard rows excluded from the tally.
+- **getInfo() priming** no longer replays already‑past round outcomes when the
+  companion starts mid‑match (adopts score/round/map/agent silently).
+- **Recording ownership** — the plugin only auto‑stops a recording it started:
+  ownership is claimed on `RECORDING_STARTED` (not optimistically) and cleared on
+  any `RECORDING_STOPPED`, so toggling auto‑record off or manually stopping/
+  restarting can never make GamePulse stop a user‑owned recording.
+- Added `companion/test/normalizer.test.js` (`npm test`) locking the above, and
+  hardened the simulator to use tagline/spaced/bare name variants.
+
 ## 0.2.0
 
 New Valorant moments (companion‑derived from roster/score state that only the

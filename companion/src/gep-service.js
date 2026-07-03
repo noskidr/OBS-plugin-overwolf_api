@@ -151,22 +151,28 @@ class GepService extends EventEmitter {
   }
 
   /* If the companion starts mid-match, getInfo() returns the current info
-     dictionary — replay it through the normal info path so player name /
-     agent / map / score / round are known immediately. */
+     dictionary. Build a DECODED nested snapshot and hand it to the normalizer's
+     priming path (which adopts state without emitting derived round outcomes
+     that already happened). */
   async _primeFromInfo(gameId) {
     try {
       const snapshot = await this.gep.getInfo(gameId);
       if (!snapshot || typeof snapshot !== 'object') return;
       const root = snapshot.res && typeof snapshot.res === 'object' ? snapshot.res : snapshot;
+      const decoded = {};
       let fed = 0;
       for (const [feature, group] of Object.entries(root)) {
         if (!group || typeof group !== 'object' || Array.isArray(group)) continue;
+        decoded[feature] = {};
         for (const [key, value] of Object.entries(group)) {
-          this.emit('gep-info', { gameId, feature, category: feature, key, value: this._decode(value) });
+          decoded[feature][key] = this._decode(value);
           fed++;
         }
       }
-      if (fed) this.emit('log', 'info', `primed ${fed} info values from getInfo()`);
+      if (fed) {
+        this.emit('prime', decoded);
+        this.emit('log', 'info', `primed ${fed} info values from getInfo()`);
+      }
     } catch (err) {
       this.emit('log', 'debug', `getInfo prime failed: ${err}`);
     }

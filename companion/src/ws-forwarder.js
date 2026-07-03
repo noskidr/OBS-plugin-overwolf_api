@@ -129,7 +129,7 @@ class WsForwarder extends EventEmitter {
         this.handshakeDone = true;
         this.emit('status', true);
         this.emit('log', 'info', `connected to OBS plugin at ws://${this.host}:${this.port}`);
-        this._sendText(JSON.stringify({ t: 'hello', client: 'gamepulse-companion', version: '0.2.0', token: this.token }));
+        this._sendText(JSON.stringify({ t: 'hello', client: 'gamepulse-companion', version: '0.2.1', token: this.token }));
         this._flushQueue();
         this._startPing();
       }
