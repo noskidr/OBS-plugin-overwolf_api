@@ -1,7 +1,7 @@
 {
   "name": "GamePulseCompanion",
   "productName": "GamePulse Companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Forwards Overwolf GEP live game events to the GamePulse OBS plugin over localhost WebSocket.",
   "author": {
     "name": "Dikson Rajbanshi",

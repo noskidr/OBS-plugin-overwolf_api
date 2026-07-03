@@ -39,8 +39,11 @@ private slots:
 	void onComment();
 	void onClip();
 	void onExport();
+	void onTestEvent();
+	void onOpenSessions();
 	void onToggleServer();
 	void onApplyServer();
+	void onAutomationChanged();
 	void onTwitchConnect();
 	void onTwitchLogout();
 	void onToggleChat();
@@ -49,12 +52,24 @@ private slots:
 
 private:
 	void buildUi();
+	void refreshSceneCombos();
 
 	/* status */
 	QLabel *status_dot_ = nullptr;
 	QLabel *status_text_ = nullptr;
 	QLabel *game_label_ = nullptr;
+	QLabel *context_label_ = nullptr;
 	QLabel *twitch_label_ = nullptr;
+
+	/* automation */
+	QCheckBox *auto_replay_check_ = nullptr;
+	QCheckBox *auto_record_check_ = nullptr;
+	QCheckBox *split_match_check_ = nullptr;
+	QCheckBox *export_match_check_ = nullptr;
+	QComboBox *scene_game_combo_ = nullptr;
+	QComboBox *scene_lobby_combo_ = nullptr;
+	QComboBox *scene_privacy_combo_ = nullptr;
+	bool building_ui_ = false;
 
 	/* controls */
 	QLineEdit *comment_edit_ = nullptr;

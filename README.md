@@ -34,9 +34,11 @@ weapon/victim/headshot detail baked into the label.
 | **Twitch stream markers** | Posts to Helix `POST /streams/markers` at the live position, e.g. `[GP] ACE - 5 kills this round @12:41`. Device‑Code‑Grant login, no server needed. |
 | **On‑stream overlay** | A native OBS source ("GamePulse Overlay") renders a live event feed + K/D/A + clip counter. Add it like any source. |
 | **Viewer `!clip` command** | Reads Twitch chat anonymously; a permission‑gated, cooldown‑limited `!clip` saves a replay. Mods‑only by default. |
-| **Control + event‑log dock** | A dockable panel: manual Bookmark / Comment / Clip / Export buttons, live event log, server + Twitch settings. |
+| **Control + event‑log dock** | A dockable panel: manual Bookmark / Comment / Clip / Export / **Test Event** buttons, live match context line, a **Game Automation** section, live event log, server + Twitch settings. |
 | **Highlight exports** | Every session writes `youtube-chapters.txt`, `events.csv`, `markers.edl` (DaVinci Resolve), and `session.json`. |
-| **Derived events** | Multikills and aces are computed from the raw kill stream by the plugin's rules engine, so they're consistent regardless of source. |
+| **Derived Valorant moments** | Multikills + aces (from the kill stream) plus **first blood, 1vN clutches** (won-round + roster alive‑states), round win/loss, and a full **match summary** (`8‑4 · Ascent · Jett · 24/11/6 · HS 32%`). Kill labels carry weapon → victim (HS) and live score/round. |
+| **Game automation** | Auto‑start the **replay buffer** when Valorant launches; auto‑**record per match** (or split the recording file at match start); **auto‑export** highlights when a match ends; **scene automation** — switch to a privacy scene during agent select (anti‑stream‑snipe), an in‑game scene on map load, a lobby scene in menus. |
+| **Live overlay context** | The overlay and dock show current **agent · map · score · round**, updated from GEP state in real time. |
 
 ## Architecture
 

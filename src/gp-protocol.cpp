@@ -187,6 +187,14 @@ void Protocol::normalize_info(obs_data_t *item, ParseResult &out)
 	if (key.empty())
 		return;
 
+	/* Companion-normalized context (display-ready values). */
+	std::string feature = get_string(item, "feature");
+	if (feature == "context") {
+		out.context[key] = value;
+		info_state_[game_id + "|ctx." + key] = value;
+		return;
+	}
+
 	std::string state_key = game_id + "|" + key;
 	std::string prev;
 	auto it = info_state_.find(state_key);

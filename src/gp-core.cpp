@@ -82,6 +82,15 @@ void GpCore::apply_config_defaults(obs_data_t *cfg)
 	obs_data_set_default_bool(cfg, "chapter_on_manual_comment", true);
 	obs_data_set_default_int(cfg, "overlay_duration_ms", 4200);
 	obs_data_set_default_double(cfg, "caption_duration_sec", 2.0);
+
+	/* game automation */
+	obs_data_set_default_bool(cfg, "auto_replay_buffer", true);
+	obs_data_set_default_bool(cfg, "auto_record", false);
+	obs_data_set_default_bool(cfg, "split_on_match", false);
+	obs_data_set_default_bool(cfg, "export_on_match_end", true);
+	obs_data_set_default_string(cfg, "scene_game", "");
+	obs_data_set_default_string(cfg, "scene_lobby", "");
+	obs_data_set_default_string(cfg, "scene_privacy", "");
 }
 
 void GpCore::load_config()
@@ -262,12 +271,21 @@ void GpCore::process_event(GpEvent &ev)
 		actions = rules_.evaluate(ev, now);
 	}
 
+	/* match_start automation must run BEFORE actions so an auto-started
+	   recording / split file is in place when the chapter fires */
+	if (ev.source == EventSource::Gep && ev.name == "match_start")
+		run_match_automation(ev);
+
 	execute_actions(ev, actions);
 
 	/* journal (skip debug-level plumbing unless configured) */
 	bool log_debug = obs_data_get_bool(config_, "log_debug_events");
 	if (ev.importance > IMP_DEBUG || log_debug)
 		journal_.append(ev);
+
+	/* match_end automation runs AFTER the journal has the summary event */
+	if (ev.source == EventSource::Gep && ev.name == "match_end")
+		run_match_automation(ev);
 
 	if (on_ui_update)
 		on_ui_update(&ev);
@@ -301,6 +319,112 @@ void GpCore::execute_actions(GpEvent &ev, uint32_t actions)
 		do_overlay(ev);
 
 	bump_overlay_stats(ev, ev.actions_taken);
+}
+
+/* ---------------- game / match automation (UI thread) ---------------- */
+
+void GpCore::switch_scene(const char *config_key)
+{
+	const char *name = obs_data_get_string(config_, config_key);
+	if (!name || !*name)
+		return;
+	obs_source_t *scene = obs_get_source_by_name(name);
+	if (!scene) {
+		obs_log(LOG_WARNING, "scene '%s' (%s) not found", name, config_key);
+		return;
+	}
+	obs_frontend_set_current_scene(scene);
+	obs_source_release(scene);
+	obs_log(LOG_INFO, "switched to scene '%s' (%s)", name, config_key);
+}
+
+void GpCore::on_game_state(bool detected)
+{
+	if (detected) {
+		if (obs_data_get_bool(config_, "auto_replay_buffer") && !obs_frontend_replay_buffer_active()) {
+			obs_log(LOG_INFO, "game detected — starting replay buffer");
+			obs_frontend_replay_buffer_start();
+		}
+		switch_scene("scene_game");
+	} else {
+		if (obs_data_get_bool(config_, "auto_record") && record_started_by_us_ &&
+		    obs_frontend_recording_active()) {
+			/* game closed mid-match — don't leave an orphan recording */
+			record_started_by_us_ = false;
+			obs_frontend_recording_stop();
+		}
+		switch_scene("scene_lobby");
+		/* stale match context shouldn't linger on the overlay */
+		{
+			std::lock_guard<std::mutex> lock(overlay_feed_.mutex);
+			overlay_feed_.map.clear();
+			overlay_feed_.agent.clear();
+			overlay_feed_.score.clear();
+			overlay_feed_.round.clear();
+			overlay_feed_.version++;
+		}
+	}
+}
+
+void GpCore::apply_context(const std::map<std::string, std::string> &ctx)
+{
+	bool changed = false;
+	{
+		std::lock_guard<std::mutex> lock(overlay_feed_.mutex);
+		auto set = [&](const char *key, std::string &slot) {
+			auto it = ctx.find(key);
+			if (it != ctx.end() && it->second != slot) {
+				slot = it->second;
+				changed = true;
+			}
+		};
+		set("map", overlay_feed_.map);
+		set("agent", overlay_feed_.agent);
+		set("score", overlay_feed_.score);
+		set("round", overlay_feed_.round);
+		if (changed)
+			overlay_feed_.version++;
+	}
+
+	/* anti-stream-snipe scene automation */
+	auto scene = ctx.find("scene");
+	if (scene != ctx.end()) {
+		if (scene->second == "agent_select")
+			switch_scene("scene_privacy");
+		else if (scene->second == "map")
+			switch_scene("scene_game");
+		else if (scene->second == "menu")
+			switch_scene("scene_lobby");
+	}
+
+	if (changed && on_ui_update)
+		on_ui_update(nullptr);
+}
+
+void GpCore::run_match_automation(const GpEvent &ev)
+{
+	if (ev.name == "match_start") {
+		bool recording = obs_frontend_recording_active();
+		if (recording && obs_data_get_bool(config_, "split_on_match")) {
+			if (obs_frontend_recording_split_file())
+				obs_log(LOG_INFO, "split recording file at match start");
+			else
+				obs_log(LOG_WARNING, "recording split rejected (needs Hybrid MP4 or fMP4)");
+		} else if (!recording && obs_data_get_bool(config_, "auto_record")) {
+			obs_log(LOG_INFO, "match started — starting recording");
+			record_started_by_us_ = true;
+			obs_frontend_recording_start();
+		}
+	} else if (ev.name == "match_end") {
+		if (obs_data_get_bool(config_, "export_on_match_end") && journal_.session_open())
+			journal_.export_files();
+		if (obs_data_get_bool(config_, "auto_record") && record_started_by_us_ &&
+		    obs_frontend_recording_active()) {
+			record_started_by_us_ = false;
+			obs_log(LOG_INFO, "match ended — stopping recording");
+			obs_frontend_recording_stop();
+		}
+	}
 }
 
 void GpCore::do_chapter(GpEvent &ev)
@@ -610,16 +734,36 @@ void GpCore::ws_message(int client_id, const std::string &text)
 	}
 
 	if (res.type == MsgType::Game) {
-		/* notify dock about game change on the UI thread */
+		/* game automation + dock notify on the UI thread */
+		struct GameTask {
+			bool detected;
+		};
+		GameTask *task = new GameTask{res.game_state != "closed"};
 		obs_queue_task(
 			OBS_TASK_UI,
 			[](void *param) {
-				GpCore *core = static_cast<GpCore *>(param);
-				if (core->on_ui_update)
-					core->on_ui_update(nullptr);
-				core->broadcast_status();
+				GameTask *t = static_cast<GameTask *>(param);
+				GpCore &core = GpCore::instance();
+				core.on_game_state(t->detected);
+				if (core.on_ui_update)
+					core.on_ui_update(nullptr);
+				core.broadcast_status();
+				delete t;
 			},
-			this, false);
+			task, false);
+	}
+
+	if (!res.context.empty()) {
+		/* context (map/agent/score/round/scene) → overlay + scene automation */
+		auto *ctx = new std::map<std::string, std::string>(std::move(res.context));
+		obs_queue_task(
+			OBS_TASK_UI,
+			[](void *param) {
+				auto *c = static_cast<std::map<std::string, std::string> *>(param);
+				GpCore::instance().apply_context(*c);
+				delete c;
+			},
+			ctx, false);
 	}
 }
 
@@ -671,6 +815,19 @@ CoreStatus GpCore::status() const
 		s.twitch_authed = twitch_->authed();
 		s.twitch_login = twitch_->login();
 		s.chat_listener = twitch_->chat_running();
+	}
+	{
+		std::lock_guard<std::mutex> lock(overlay_feed_.mutex);
+		std::string line;
+		if (!overlay_feed_.agent.empty())
+			line += overlay_feed_.agent;
+		if (!overlay_feed_.map.empty())
+			line += (line.empty() ? "" : " on ") + overlay_feed_.map;
+		if (!overlay_feed_.score.empty())
+			line += (line.empty() ? "" : " \xC2\xB7 ") + overlay_feed_.score;
+		if (!overlay_feed_.round.empty())
+			line += (line.empty() ? "" : " \xC2\xB7 ") + std::string("R") + overlay_feed_.round;
+		s.context_line = line;
 	}
 	return s;
 }

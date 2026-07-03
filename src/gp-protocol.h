@@ -61,6 +61,11 @@ struct ParseResult {
 	/* Event/Info payload(s): normalized events ready for the pipeline
 	   (batch expands to many; info usually yields none unless synthesized). */
 	std::vector<GpEvent> events;
+
+	/* Context updates carried by "context" infos from the companion
+	   (keys: map, agent, score, round, scene, clutch). Consumed by the
+	   overlay/dock and OBS scene automation. */
+	std::map<std::string, std::string> context;
 };
 
 class Protocol {

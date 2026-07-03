@@ -17,8 +17,26 @@
  */
 
 const EventEmitter = require('events');
+const https = require('https');
 
 const VALORANT_ID = 21640;
+
+/* Overwolf publishes per-game GEP health: state 1=green, 2=partial, 3=down. */
+function checkGepHealth(gameId, cb) {
+  https
+    .get(`https://game-events-status.overwolf.com/${gameId}_prod.json`, (res) => {
+      let body = '';
+      res.on('data', (c) => (body += c));
+      res.on('end', () => {
+        try {
+          cb(null, JSON.parse(body));
+        } catch (err) {
+          cb(err);
+        }
+      });
+    })
+    .on('error', (err) => cb(err));
+}
 
 class GepService extends EventEmitter {
   constructor(app) {
@@ -30,6 +48,20 @@ class GepService extends EventEmitter {
   }
 
   start() {
+    // Surface upstream event health regardless of runtime (harmless HTTPS GET).
+    checkGepHealth(VALORANT_ID, (err, health) => {
+      if (err) {
+        this.emit('log', 'debug', `GEP health check failed: ${err.message || err}`);
+        return;
+      }
+      const states = { 1: 'green (all good)', 2: 'yellow (some events degraded)', 3: 'red (events down)' };
+      const label = states[health.state] || `state ${health.state}`;
+      const level = health.state >= 3 || health.disabled_electron ? 'error' : health.state === 2 ? 'warn' : 'info';
+      this.emit('log', level, `Overwolf Valorant event health: ${label}` +
+        (health.disabled_electron ? ' — DISABLED for ow-electron right now' : ''));
+      this.emit('health', health);
+    });
+
     if (!this.app.overwolf || !this.app.overwolf.packages) {
       this.emit('log', 'error', 'ow-electron packages API not present — are you running under ow-electron? (use `npm start`, not `npm run start:electron`)');
       return;
@@ -108,6 +140,7 @@ class GepService extends EventEmitter {
         // null = subscribe to ALL features (matches the official sample)
         await this.gep.setRequiredFeatures(gameId, null);
         this.emit('log', 'info', 'GEP required features set (all)');
+        this._primeFromInfo(gameId);
         return;
       } catch (err) {
         this.emit('log', 'debug', `setRequiredFeatures attempt ${i + 1} failed: ${err}`);
@@ -115,6 +148,28 @@ class GepService extends EventEmitter {
       }
     }
     this.emit('log', 'warn', 'could not set GEP features after retries — events may not flow');
+  }
+
+  /* If the companion starts mid-match, getInfo() returns the current info
+     dictionary — replay it through the normal info path so player name /
+     agent / map / score / round are known immediately. */
+  async _primeFromInfo(gameId) {
+    try {
+      const snapshot = await this.gep.getInfo(gameId);
+      if (!snapshot || typeof snapshot !== 'object') return;
+      const root = snapshot.res && typeof snapshot.res === 'object' ? snapshot.res : snapshot;
+      let fed = 0;
+      for (const [feature, group] of Object.entries(root)) {
+        if (!group || typeof group !== 'object' || Array.isArray(group)) continue;
+        for (const [key, value] of Object.entries(group)) {
+          this.emit('gep-info', { gameId, feature, category: feature, key, value: this._decode(value) });
+          fed++;
+        }
+      }
+      if (fed) this.emit('log', 'info', `primed ${fed} info values from getInfo()`);
+    } catch (err) {
+      this.emit('log', 'debug', `getInfo prime failed: ${err}`);
+    }
   }
 
   _onGameEvent(gameId, data) {

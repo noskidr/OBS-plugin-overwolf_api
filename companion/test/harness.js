@@ -22,7 +22,8 @@ function arg(name, def) {
 
 const port = parseInt(arg('port', '4477'), 10);
 const token = arg('token', '');
-const rounds = parseInt(arg('rounds', '3'), 10);
+// one scripted match takes ~45s; default runs a single full match
+const seconds = parseInt(arg('seconds', arg('rounds', null) ? String(parseInt(arg('rounds', '1'), 10) * 50) : '50'), 10);
 
 const normalizer = new ValorantNormalizer();
 const forwarder = new WsForwarder();
@@ -64,8 +65,7 @@ console.log(`Harness: forwarding a mock Valorant match to ws://127.0.0.1:${port}
 // Give the socket a moment to connect, then start the sim.
 setTimeout(() => sim.start(), 800);
 
-// Run for a number of rounds (~15 steps * 2.2s each per round) then exit.
-const runMs = rounds * 15 * 2300 + 3000;
+// Run for the configured duration (default: one full scripted match) then exit.
 setTimeout(() => {
   sim.stop();
   setTimeout(() => {
@@ -73,4 +73,4 @@ setTimeout(() => {
     forwarder.stop();
     process.exit(0);
   }, 500);
-}, runMs);
+}, seconds * 1000);

@@ -23,6 +23,7 @@ Owns every subsystem and runs the event pipeline on the OBS/Qt main thread:
 
 #include <deque>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -57,13 +58,16 @@ struct OverlayFeed {
 	/* session counters for the stats row */
 	int kills = 0, deaths = 0, assists = 0, clips = 0, chapters = 0, markers = 0;
 	std::string game_name;
+	/* live match context from the companion ("Haven", "Jett", "8-4", "13") */
+	std::string map, agent, score, round;
 	uint64_t version = 0; /* bumped on every change so the source knows to repaint */
 };
 
 struct CoreStatus {
 	bool server_running = false;
 	int clients = 0;
-	std::string game_name; /* active game ("" if none) */
+	std::string game_name;    /* active game ("" if none) */
+	std::string context_line; /* "Jett on Haven · 8-4 · R13" ("" if unknown) */
 	bool streaming = false;
 	bool recording = false;
 	bool replay = false;
@@ -140,6 +144,12 @@ private:
 	void ws_connected(int client_id);
 	void ws_disconnected(int client_id);
 
+	/* automation (UI thread) */
+	void apply_context(const std::map<std::string, std::string> &ctx);
+	void on_game_state(bool detected);
+	void switch_scene(const char *config_key);
+	void run_match_automation(const GpEvent &ev);
+
 	void register_hotkeys();
 	void save_hotkeys(obs_data_t *cfg);
 	void load_hotkeys(obs_data_t *cfg);
@@ -151,7 +161,8 @@ private:
 	RulesEngine rules_;
 	Journal journal_;
 	std::unique_ptr<TwitchService> twitch_;
-	OverlayFeed overlay_feed_;
+	/* mutable: const status() composes the context line under its mutex */
+	mutable OverlayFeed overlay_feed_;
 
 	SessionClock stream_clock_;
 	SessionClock record_clock_;
@@ -172,6 +183,7 @@ private:
 
 	bool chapter_warned_ = false;
 	bool started_ = false;
+	bool record_started_by_us_ = false;
 
 	mutable std::mutex status_mutex_; /* guards active_game_* for status() */
 };

@@ -10,7 +10,15 @@ into OBS: auto chapter markers, replay‑buffer clips, Twitch stream markers, an
 on‑stream overlay source, a control/event‑log dock, viewer `!clip`, and
 highlight exports (YouTube chapters / CSV / DaVinci EDL).
 
-- **v1 scope: Valorant only** (Overwolf game id `21640`). The plugin is
+- **v0.2 (current)** added, still Valorant‑only: companion‑derived **first
+  blood / 1vN clutch / round win‑loss / match summary** and rich kill detail
+  (weapon→victim, HS, live score/round); **game automation** (auto replay
+  buffer on launch, auto‑record or split per match, auto‑export on match end,
+  agent‑select privacy‑scene switching); live **overlay context** (agent · map
+  · score · round); a dock **Automation** panel + **Test Event** / **Open
+  Sessions** buttons; companion **GEP health check** + **getInfo() priming** for
+  mid‑match starts. See `CHANGELOG.md`.
+- **Scope: Valorant only** (Overwolf game id `21640`). The plugin is
   game‑agnostic; only the companion's normalizer/taxonomy are Valorant‑specific.
 - Repo: <https://github.com/noskidr/OBS-plugin-overwolf_api> (remote `origin`,
   branch `main`).

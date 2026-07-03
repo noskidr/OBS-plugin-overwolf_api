@@ -100,6 +100,7 @@ void paint_overlay(OverlaySource *s, uint64_t now_ns)
 	std::vector<OverlayItem> items;
 	int kills, deaths, assists, clips;
 	std::string game;
+	std::string context;
 	{
 		std::lock_guard<std::mutex> lock(feed.mutex);
 		for (const OverlayItem &it : feed.items)
@@ -110,6 +111,20 @@ void paint_overlay(OverlaySource *s, uint64_t now_ns)
 		assists = feed.assists;
 		clips = feed.clips;
 		game = feed.game_name;
+		/* right side of the stats bar: "Haven · 8-4 · R13" (fallback: game) */
+		auto append = [&](const std::string &part) {
+			if (part.empty())
+				return;
+			if (!context.empty())
+				context += " \xC2\xB7 ";
+			context += part;
+		};
+		append(feed.map);
+		append(feed.score);
+		if (!feed.round.empty())
+			append("R" + feed.round);
+		if (context.empty())
+			context = game;
 	}
 
 	if (s->show_feed) {
@@ -168,10 +183,10 @@ void paint_overlay(OverlaySource *s, uint64_t now_ns)
 		p.setFont(stats_font);
 		p.drawText(bar.adjusted(12, 0, -12, 0), Qt::AlignLeft | Qt::AlignVCenter, stats);
 
-		if (!game.empty()) {
+		if (!context.empty()) {
 			p.setPen(QColor(140, 152, 166));
 			p.drawText(bar.adjusted(12, 0, -12, 0), Qt::AlignRight | Qt::AlignVCenter,
-				   QString::fromUtf8(game.c_str()));
+				   QString::fromUtf8(context.c_str()));
 		}
 	}
 

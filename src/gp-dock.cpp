@@ -21,8 +21,11 @@ GamePulse for OBS — dock implementation.
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include <ctime>
+
 #include <obs-module.h>
 #include <obs-frontend-api.h>
+#include <util/platform.h>
 
 #include "gp-core.h"
 #include "gp-twitch.h"
@@ -82,6 +85,8 @@ void GpDock::buildUi()
 	root->setContentsMargins(8, 8, 8, 8);
 	root->setSpacing(8);
 
+	building_ui_ = true;
+
 	/* ---- status row ---- */
 	auto *statusRow = new QHBoxLayout();
 	status_dot_ = new QLabel(QString::fromUtf8("\xE2\x97\x8F"));
@@ -93,6 +98,11 @@ void GpDock::buildUi()
 	statusRow->addWidget(status_text_, 1);
 	statusRow->addWidget(game_label_);
 	root->addLayout(statusRow);
+
+	/* live match context ("Jett on Haven · 8-4 · R13") */
+	context_label_ = new QLabel("");
+	context_label_->setStyleSheet("color:#9aa7b5; padding-left:2px;");
+	root->addWidget(context_label_);
 
 	/* ---- quick actions ---- */
 	auto *actions = new QGroupBox(obs_module_text("Dock.QuickActions"));
@@ -119,7 +129,50 @@ void GpDock::buildUi()
 	commentRow->addWidget(comment_edit_, 1);
 	commentRow->addWidget(commentBtn);
 	av->addLayout(commentRow);
+
+	auto *utilRow = new QHBoxLayout();
+	auto *testBtn = new QPushButton(obs_module_text("Dock.TestEvent"));
+	testBtn->setToolTip(obs_module_text("Dock.TestEventTip"));
+	connect(testBtn, &QPushButton::clicked, this, &GpDock::onTestEvent);
+	auto *sessionsBtn = new QPushButton(obs_module_text("Dock.OpenSessions"));
+	connect(sessionsBtn, &QPushButton::clicked, this, &GpDock::onOpenSessions);
+	utilRow->addWidget(testBtn);
+	utilRow->addWidget(sessionsBtn);
+	av->addLayout(utilRow);
 	root->addWidget(actions);
+
+	/* ---- automation ---- */
+	obs_data_t *cfg = GpCore::instance().config();
+	auto *automation = new QGroupBox(obs_module_text("Dock.Automation"));
+	auto *auv = new QVBoxLayout(automation);
+
+	auto_replay_check_ = new QCheckBox(obs_module_text("Dock.AutoReplay"));
+	auto_replay_check_->setChecked(obs_data_get_bool(cfg, "auto_replay_buffer"));
+	auto_record_check_ = new QCheckBox(obs_module_text("Dock.AutoRecord"));
+	auto_record_check_->setChecked(obs_data_get_bool(cfg, "auto_record"));
+	split_match_check_ = new QCheckBox(obs_module_text("Dock.SplitMatch"));
+	split_match_check_->setChecked(obs_data_get_bool(cfg, "split_on_match"));
+	export_match_check_ = new QCheckBox(obs_module_text("Dock.ExportMatch"));
+	export_match_check_->setChecked(obs_data_get_bool(cfg, "export_on_match_end"));
+	for (QCheckBox *cb : {auto_replay_check_, auto_record_check_, split_match_check_, export_match_check_}) {
+		connect(cb, &QCheckBox::toggled, this, &GpDock::onAutomationChanged);
+		auv->addWidget(cb);
+	}
+
+	auto addSceneRow = [&](const char *label, QComboBox *&combo) {
+		auto *row = new QHBoxLayout();
+		row->addWidget(new QLabel(obs_module_text(label)));
+		combo = new QComboBox();
+		combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+		connect(combo, &QComboBox::currentTextChanged, this, &GpDock::onAutomationChanged);
+		row->addWidget(combo, 1);
+		auv->addLayout(row);
+	};
+	addSceneRow("Dock.SceneGame", scene_game_combo_);
+	addSceneRow("Dock.SceneLobby", scene_lobby_combo_);
+	addSceneRow("Dock.ScenePrivacy", scene_privacy_combo_);
+	refreshSceneCombos();
+	root->addWidget(automation);
 
 	/* ---- server ---- */
 	auto *server = new QGroupBox(obs_module_text("Dock.Server"));
@@ -192,6 +245,51 @@ void GpDock::buildUi()
 	summary_label_->setStyleSheet("color:#9aa;");
 	lv->addWidget(summary_label_);
 	root->addWidget(logBox, 1);
+
+	building_ui_ = false;
+}
+
+void GpDock::refreshSceneCombos()
+{
+	obs_data_t *cfg = GpCore::instance().config();
+	char **names = obs_frontend_get_scene_names();
+
+	QStringList scenes;
+	scenes << obs_module_text("Dock.SceneOff");
+	if (names) {
+		for (char **name = names; *name; name++)
+			scenes << QString::fromUtf8(*name);
+		bfree(names);
+	}
+
+	struct Row {
+		QComboBox *combo;
+		const char *key;
+	};
+	const Row rows[] = {{scene_game_combo_, "scene_game"},
+			    {scene_lobby_combo_, "scene_lobby"},
+			    {scene_privacy_combo_, "scene_privacy"}};
+
+	bool was_building = building_ui_;
+	building_ui_ = true; /* suppress onAutomationChanged during repopulate */
+	for (const Row &r : rows) {
+		if (!r.combo)
+			continue;
+		QString configured = QString::fromUtf8(obs_data_get_string(cfg, r.key));
+		QString current = r.combo->count() ? r.combo->currentText() : configured;
+		QString want = current.isEmpty() || r.combo->count() == 0 ? configured : current;
+
+		QStringList existing;
+		for (int i = 0; i < r.combo->count(); i++)
+			existing << r.combo->itemText(i);
+		if (existing != scenes) {
+			r.combo->clear();
+			r.combo->addItems(scenes);
+		}
+		int idx = want.isEmpty() ? 0 : r.combo->findText(want);
+		r.combo->setCurrentIndex(idx < 0 ? 0 : idx);
+	}
+	building_ui_ = was_building;
 }
 
 void GpDock::refreshStatus()
@@ -219,6 +317,10 @@ void GpDock::refreshStatus()
 	} else {
 		game_label_->setText(s.recording || s.streaming ? (s.streaming ? "LIVE" : "REC") : "");
 	}
+
+	context_label_->setText(QString::fromStdString(s.context_line));
+	context_label_->setVisible(!s.context_line.empty());
+	refreshSceneCombos();
 
 	if (s.twitch_authed) {
 		QString t =
@@ -300,6 +402,55 @@ void GpDock::onExport()
 					 QString(obs_module_text("Dock.ExportedTo")).arg(QString::fromStdString(dir)));
 		QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(dir)));
 	}
+}
+
+void GpDock::onTestEvent()
+{
+	/* Fires a fake Valorant kill through the REAL pipeline (rules, actions,
+	   journal, overlay) so users can verify their setup without the game or
+	   the companion. */
+	GpEvent ev;
+	ev.source = EventSource::Gep;
+	ev.game_id = "21640";
+	ev.game_name = "VALORANT";
+	ev.name = "kill";
+	ev.label = "Kill";
+	ev.detail = "Test \xE2\x80\x94 Vandal \xE2\x86\x92 Target (HS)";
+	ev.importance = IMP_NOTABLE;
+	ev.wall_ms = (int64_t)time(nullptr) * 1000;
+	GpCore::instance().submit_event(std::move(ev));
+}
+
+void GpDock::onOpenSessions()
+{
+	std::string dir = GpCore::instance().sessions_dir();
+	if (dir.empty())
+		return;
+	os_mkdirs(dir.c_str());
+	QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(dir)));
+}
+
+void GpDock::onAutomationChanged()
+{
+	if (building_ui_)
+		return;
+
+	obs_data_t *cfg = GpCore::instance().config();
+	obs_data_set_bool(cfg, "auto_replay_buffer", auto_replay_check_->isChecked());
+	obs_data_set_bool(cfg, "auto_record", auto_record_check_->isChecked());
+	obs_data_set_bool(cfg, "split_on_match", split_match_check_->isChecked());
+	obs_data_set_bool(cfg, "export_on_match_end", export_match_check_->isChecked());
+
+	const QString off = obs_module_text("Dock.SceneOff");
+	auto scene_value = [&](QComboBox *combo) -> QByteArray {
+		QString text = combo->currentText();
+		return (text == off) ? QByteArray("") : text.toUtf8();
+	};
+	obs_data_set_string(cfg, "scene_game", scene_value(scene_game_combo_).constData());
+	obs_data_set_string(cfg, "scene_lobby", scene_value(scene_lobby_combo_).constData());
+	obs_data_set_string(cfg, "scene_privacy", scene_value(scene_privacy_combo_).constData());
+
+	GpCore::instance().save_config();
 }
 
 void GpDock::onToggleServer()

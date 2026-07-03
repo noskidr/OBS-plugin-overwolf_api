@@ -50,8 +50,19 @@ const MetaMap COMMON_EVENTS = {
 	{"knockout", {"Knockout", IMP_NOTABLE}},
 	{"revive", {"Revive", IMP_MINOR}},
 	{"level", {"Level Up", IMP_MINOR}},
-	{"match_start", {"Match Start", IMP_MINOR}},
-	{"matchStart", {"Match Start", IMP_MINOR}},
+	/* match_start is NOTABLE so each match gets its own chapter/marker —
+	   the detail carries the map ("Match Start - Haven"), which is exactly
+	   the YouTube-chapter block editors want. */
+	{"match_start", {"Match Start", IMP_NOTABLE}},
+	{"matchStart", {"Match Start", IMP_NOTABLE}},
+	{"first_blood", {"First Blood", IMP_NOTABLE}},
+	{"round_won", {"Round Won", IMP_MINOR}},
+	{"round_lost", {"Round Lost", IMP_DEBUG}},
+	{"clutch_1v1", {"Clutch 1v1", IMP_NOTABLE}},
+	{"clutch_1v2", {"CLUTCH 1v2", IMP_EPIC}},
+	{"clutch_1v3", {"CLUTCH 1v3", IMP_EPIC}},
+	{"clutch_1v4", {"CLUTCH 1v4", IMP_EPIC}},
+	{"clutch_1v5", {"CLUTCH 1v5", IMP_EPIC}},
 	{"match_end", {"Match End", IMP_NOTABLE}},
 	{"matchEnd", {"Match End", IMP_NOTABLE}},
 	{"round_start", {"Round Start", IMP_MINOR}},
